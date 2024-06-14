@@ -185,7 +185,7 @@ async function _constructor(src, src_token, src_amount, dest, dest_token, wallet
     affiliateFeePercent: 0.01,
     affiliateFeeRecipient: "0xdd2a4dbf3fdc4ae3b34a11797f51350a4306f1bb"
   };
-  const url = new URL(baseUrl); 
+  const url = new URL(baseUrl);
   url.search = new URLSearchParams(queryParams);
   return await getQuote(url);
 }
@@ -220,16 +220,16 @@ async function debridge() {
 }
 
 
-async function _constructor_lifi(src, src_token, src_amount, dest, dest_token,wallet_address) {
+async function _constructor_lifi(src, src_token, src_amount, dest, dest_token, wallet_address) {
 
   const baseUrl = "https://li.quest/v1/quote";
-  const queryParams ={
-      fromChain: src,
-      fromToken: src_token,
-      fromAmount: src_amount,
-      toChain: dest,
-      toToken: dest_token,
-      fromAddress:wallet_address
+  const queryParams = {
+    fromChain: src,
+    fromToken: src_token,
+    fromAmount: src_amount,
+    toChain: dest,
+    toToken: dest_token,
+    fromAddress: wallet_address
   };
   const url = new URL(baseUrl);
   url.search = new URLSearchParams(queryParams);
@@ -237,33 +237,159 @@ async function _constructor_lifi(src, src_token, src_amount, dest, dest_token,wa
 }
 async function getQuote_lifi(url) {
   let response = await fetch(url, {
-      method: 'GET',
-      headers: { 'accept': 'application/json' },
+    method: 'GET',
+    headers: { 'accept': 'application/json' },
   })
   const quote = await response.json();
-  if(response.ok){
-  console.log('lifi Quote:', quote);
-  console.log('estimated out: ', quote.estimate.toAmount)
-  console.log("values for transaction: ",quote.transactionRequest)
-  const valueBN = ethers.BigNumber.from(quote.transactionRequest.value);
-  valueHex = ethers.utils.hexlify(valueBN);
-  const sentTx = await signer.sendTransaction({
-    to: quote.transactionRequest.to,
-    data: quote.transactionRequest.data,
-    value: valueBN,
-    gasLimit: quote.transactionRequest.gasLimit,
-    gasPrice: quote.transactionRequest.gasPrice
-  });
-  console.log("Transaction sent! Hash:", sentTx.hash);
-  return quote;
+  if (response.ok) {
+    console.log('lifi Quote:', quote);
+    console.log('estimated out: ', quote.estimate.toAmount)
+    console.log("values for transaction: ", quote.transactionRequest)
+    const valueBN = ethers.BigNumber.from(quote.transactionRequest.value);
+    valueHex = ethers.utils.hexlify(valueBN);
+    const sentTx = await signer.sendTransaction({
+      to: quote.transactionRequest.to,
+      data: quote.transactionRequest.data,
+      value: valueBN,
+      gasLimit: quote.transactionRequest.gasLimit,
+      gasPrice: quote.transactionRequest.gasPrice
+    });
+    console.log("Transaction sent! Hash:", sentTx.hash);
+    return quote;
   }
-  else{
-      console.log('There was a problem with the fetch operation:', error);
+  else {
+    console.log('There was a problem with the fetch operation:', error);
   }
 }
 
 async function jumper() {
-_constructor_lifi(8453,"0x0000000000000000000000000000000000000000","1000000000000000",42161,"0x0000000000000000000000000000000000000000","address")
+  _constructor_lifi(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
 }
 
+async function odos(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address) {
+  async function _constructor_odos(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address) {
 
+    const quoteRequestBody = {
+      chainId: _chainId,
+      inputTokens: [
+        {
+          tokenAddress: _input_address,
+          amount: _input_amount,
+        }
+      ],
+      outputTokens: [
+        {
+          tokenAddress: _output_address,
+          proportion: 1
+        }
+      ],
+      userAddr: _user_address,
+      slippageLimitPercent: _slippage,
+      referralCode: _referral_code,
+      compact: _compact,
+    };
+    return await getQuote(quoteRequestBody);
+  }
+
+  async function getQuote(quoteRequestBody) {
+    const quoteUrl = 'https://api.odos.xyz/sor/quote/v2';
+
+    const response = await fetch(
+      quoteUrl,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quoteRequestBody),
+      });
+
+    if (response.status === 200) {
+      const quote = await response.json();
+      //console.log('ODOS Quote:', quote);
+      //console.log("the output amount is :", quote.outAmounts[0]);
+      return await quote;
+    } else {
+      console.error('Error in Quote:', response);
+      return;
+    }
+  }
+
+  async function makeTransaction(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address) {
+
+    const quote = await _constructor_odos(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address)
+    const address = _user_address;
+    const pathId = quote.pathId;
+    //console.log(pathId);
+
+    const transactionUrl = "https://api.odos.xyz/sor/assemble";
+    const transactionRequestBody = {
+      "pathId": pathId,
+      "simulate": false,
+      "userAddr": address
+    };
+    return await getTransaction(transactionRequestBody, transactionUrl);
+  }
+  async function getTransaction(transactionRequestBody, transactionUrl) {
+    const response = await fetch(
+      transactionUrl,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transactionRequestBody),
+      });
+
+    if (response.status === 200) {
+      const transaction = await response.json();
+      //console.log('Transaction:', transaction);
+      return await transaction;
+    } else {
+      console.error('Error in Transaction:', response);
+      return;
+    }
+  }
+  const data = await makeTransaction(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address)
+
+  try {
+    console.log("Got the data:", data);
+    const allowance = await checkAllowance(_input_address, data.transaction.to, wallet_address);
+    const approval = ethers.utils.parseUnits(allowance.toString(), inputDecimals);
+    console.log("amount = ", amount);
+    console.log("approval = ", approval.toString()); 
+
+    if (approval.lt(ethers.utils.parseUnits(amount, inputDecimals))) {
+      console.log("Approval Required");
+      await setAllowance(_input_address, data.transaction.to, amount);
+    }
+    let valueHex;
+    if (data.transaction.value === "0") {
+      valueHex = "0x0";
+    } else {
+      const valueBN = ethers.BigNumber.from(data.transaction.value);
+      valueHex = ethers.utils.hexlify(valueBN);
+    }
+    const gasBN = ethers.BigNumber.from(data.transaction.gas);
+    const gasHex = ethers.utils.hexlify(gasBN);
+    const gasPBN = ethers.BigNumber.from(data.transaction.gasPrice);
+    const gasPHex = ethers.utils.hexlify(gasPBN);
+    const sentTx = await signer.sendTransaction({
+      gasLimit: gasHex,
+      gasPrice: gasPHex,
+      to: data.transaction.to,
+      data: data.transaction.data,
+      value: valueHex,
+      chainId: data.transaction.chainId,
+    });
+    console.log("Transaction sent! Hash:", sentTx.hash);
+
+    // Optionally, wait for transaction confirmation
+    const receipt = await sentTx.wait();
+    console.log("Transaction confirmed! Block number:", receipt.blockNumber);
+  } catch (error) {
+    console.error("Error handling swap:", error);
+    // Handle errors appropriately (e.g., display user-friendly message)
+  }
+
+}
+
+async function odos_transaction() {
+  odos(42161, 0.3, 0, true, "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4", "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", "1000000000000000000", wallet_address)
+}
