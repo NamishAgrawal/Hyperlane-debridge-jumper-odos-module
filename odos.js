@@ -54,7 +54,7 @@ async function getQuote(quoteRequestBody) {
 //     console.log("\n ", quote_odos.pathId)
 //     makeTransaction(quote_odos.pathId, wallet_address)
 // }
-// odos("0xc0DEF418E6A13b78a5320b9C3331D2bf21ADD4f2");
+// odos("address here");
 
 async function makeTransaction(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address) {
 

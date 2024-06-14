@@ -8,7 +8,7 @@ async function _constructor_lifi(src, src_token, src_amount, dest, dest_token,wa
         toChain: dest,
         toToken: dest_token,
         fromAddress:wallet_address
-    };
+    };//
     const url = new URL(baseUrl);
     url.search = new URLSearchParams(queryParams);
     return await getQuote(url);
@@ -24,4 +24,4 @@ async function getQuote(url) {
     console.log("values for transaction: ",quote.transactionRequest)
     return quote;
 }
-_constructor_lifi(42161,"0x0000000000000000000000000000000000000000","100000000000000000",8453,"0x0000000000000000000000000000000000000000","0xc0DEF418E6A13b78a5320b9C3331D2bf21ADD4f2")
+_constructor_lifi(42161,"0x0000000000000000000000000000000000000000","100000000000000000",8453,"0x0000000000000000000000000000000000000000","address")
