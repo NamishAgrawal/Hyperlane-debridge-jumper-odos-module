@@ -26,10 +26,11 @@ async function getQuote(url) {
     if(response.ok){
     console.log('debridge Quote:', quote);
     console.log("tx: ",quote.tx)
-    }
+    console.log("points: ",quote.actualUserPoints)
+}
     else{
         console.log('There was a problem with the fetch operation:', error);
     }
     return quote;
 }   
-_constructor(42161,"0x0000000000000000000000000000000000000000","100000000000000000",8453,"0x0000000000000000000000000000000000000000","0xdd2a4dbf3fdc4ae3b34a11797f51350a4306f1bb")
+_constructor(42161,"0x0000000000000000000000000000000000000000","100000000000000000",8453,"0x0000000000000000000000000000000000000000","0xc0DEF418E6A13b78a5320b9C3331D2bf21ADD4f2")

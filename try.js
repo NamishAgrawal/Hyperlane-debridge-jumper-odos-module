@@ -1,7 +1,36 @@
 const connectBtn = document.getElementById("connectBtn");
 let provider;
 let signer;
+let inputDecimals;
 let wallet_address;
+let currentChain;
+
+const switchNetwork = async (networkId) => {
+  try {
+    // Ensure the MetaMask provider is available
+    if (!window.ethereum) {
+      console.error("MetaMask provider not found");
+      return;
+    }
+
+    // Request switching to the desired network
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: `0x${networkId.toString(16)}` }], // Convert networkId to hex format
+    });
+
+    // Optionally, you can listen for network change events
+    window.ethereum.on('chainChanged', (chainId) => {
+      console.log(`Switched to chainId: ${chainId}`);
+      alert(`Switched to chainId: ${chainId}`);
+    });
+
+    console.log(`Switched to networkId: ${networkId}`);
+  } catch (error) {
+    console.error("Error switching network:", error);
+  }
+};
+
 connectBtn.addEventListener("click", async () => {
   try {
     const { ethereum } = window;
@@ -58,6 +87,23 @@ const addressesMapping = {
   690: "0x49bF21531991742b0c1797230758992769771CcD" // redstone_id
 };
 
+const networkIdToName = {
+
+  "optimism": 10,
+  "bsc": 56,
+  "arb": 42161,
+  "matic": 137,
+  "base": 8453,
+  "scroll": 534352,
+  "manta": 169,
+  "mode": 34443,
+  "ancient8": 888888888,
+  "zetachain": 7000,
+  "redstone": 690,
+  "linea": 59144
+
+};
+
 const abi = [
   "function quoteBridge(uint32 _destination, uint amount) external view returns (uint fee)",
   "function bridgeETH(uint32 _destination, uint amount) public payable returns (bytes32 messageId)",
@@ -65,6 +111,87 @@ const abi = [
 ]
 // const token = new ethers.Contract(tokenAddress, abi, provider);
 
+const aggregatorV3InterfaceABI = [
+  {
+    inputs: [],
+    name: "decimals",
+    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "description",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint80", name: "_roundId", type: "uint80" }],
+    name: "getRoundData",
+    outputs: [
+      { internalType: "uint80", name: "roundId", type: "uint80" },
+      { internalType: "int256", name: "answer", type: "int256" },
+      { internalType: "uint256", name: "startedAt", type: "uint256" },
+      { internalType: "uint256", name: "updatedAt", type: "uint256" },
+      { internalType: "uint80", name: "answeredInRound", type: "uint80" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "latestRoundData",
+    outputs: [
+      { internalType: "uint80", name: "roundId", type: "uint80" },
+      { internalType: "int256", name: "answer", type: "int256" },
+      { internalType: "uint256", name: "startedAt", type: "uint256" },
+      { internalType: "uint256", name: "updatedAt", type: "uint256" },
+      { internalType: "uint80", name: "answeredInRound", type: "uint80" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "version",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+
+const top_base = ["0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "0x50c5725949a6f0c72e6c4a641f24049a917db0cb", "0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c", "0xB0fFa8000886e57F86dd5264b9582b2Ad87b2b91"];//eth,usd,usd,eth,w
+const top_arb = ["0x0000000000000000000000000000000000000000", "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8", "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f", "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4"];
+const top_optimism = ["0x0000000000000000000000000000000000000000", "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58", "0x0b2c639c533813f4aa9d7837caf62653d097ff85", "0x68f180fcce6836688e9084f035309e29bf0a2095", "0x350a791bfc2c21f9ed5d10980dad2e2638ffa7f6"];
+const top_bsc = ["0x0000000000000000000000000000000000000000", "0x2170ed0880ac9a755fd29b2688956bd959f933f8", "0x55d398326f99059ff775485246999027b3197955", "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"];
+const top_matic = ["0x0000000000000000000000000000000000000000", "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", "0x3BA4c387f786bFEE076A58914F5Bd38d668B42c3", "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"];
+const top_scroll = ["0x0000000000000000000000000000000000000000", "0xf55bec9cafdbe8730f096aa55dad6d22d44099df", "0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4", "0xf610a9dfb7c89644979b4a0f27063e9e7d7cda32", "0x3c1bca5a656e69edcd0d4e36bebb3fcdaca60cf1"];
+const top_mode = ["0x0000000000000000000000000000000000000000", "0xd988097fb8612cc24eeC14542bC03424c656005f", "0xf0F161fDA2712DB8b566946122a5af183995e2eD"];
+const top_linea = ["0x0000000000000000000000000000000000000000", "0xA219439258ca9da29E9Cc4cE5596924745e12B93", "0x176211869cA2b568f2A7D4EE941E073a821EE1ff", "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4", "0x5B16228B94b68C7cE33AF2ACc5663eBdE4dCFA2d"];
+
+function choseTopToken(chainId) {
+  switch (chainId) {
+    case 8453: return top_base[Math.floor(Math.random() * top_base.length)];
+      break;
+    case 42161: return top_arb[Math.floor(Math.random() * top_arb.length)];
+      break;
+    case 10: return top_optimism[Math.floor(Math.random() * top_optimism.length)];
+      break;
+    case 56: return top_bsc[Math.floor(Math.random() * top_bsc.length)];
+      break;
+    case 137: return top_matic[Math.floor(Math.random() * top_matic.length)];
+      break;
+    case 534352: return top_scroll[Math.floor(Math.random() * top_scroll.length)];
+      break;
+    case 34443: return top_mode[Math.floor(Math.random() * top_mode.length)];
+      break;
+    case 59144: return top_linea[Math.floor(Math.random() * top_linea.length)];
+      break;
+    default: return "0x0000000000000000000000000000000000000000";
+  }
+}
 async function getQuote() {
 
   const contract = new ethers.Contract(base, abi, signer);
@@ -100,7 +227,116 @@ const abi_erc20 = [
 ];
 
 
+async function getPrice(addr) {
+  try {
+      const priceFeed = new ethers.Contract(addr, aggregatorV3InterfaceABI, provider);
+      const roundData = await priceFeed.latestRoundData();
+      console.log("Latest Round Data:", roundData);
+      // Process the roundData as needed
+  } catch (error) {
+      console.error("Error fetching price data:", error);
+  }
+}
 
+
+async function getPrice_test(){
+  getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
+}
+
+async function checkBalance(tokenAddress, ownerAddress) {
+  try {
+    if (!provider) {
+      console.error("Provider not initialized. Please connect to a node first.");
+      return null;
+    }
+    const token = new ethers.Contract(tokenAddress, abi_erc20, provider);
+    console.log("Token:", token);
+    const balance = await token.balanceOf(ownerAddress);
+    const decimals = await token.decimals();
+    console.log("Balance:", balance);
+    return balance;
+  } catch (error) {
+    console.error("Error checking balance:", error);
+    return null;
+  }
+}
+function findMaxIndex(arr) {
+  if (!arr || arr.length === 0) {
+    return -1; // Empty array
+  }
+
+  let maxIndex = 0;
+  let maxValue = arr[0];
+
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i].gt(maxValue)) {
+      maxIndex = i;
+      maxValue = arr[i];
+    }
+  }
+
+  return maxIndex;
+}
+async function getMaxBalance(chainid, wallet_address) {
+  let arr;
+  switch (chainid) {
+    case 8453: arr = top_base;
+      break;
+    case 42161: arr = top_arb;
+      break;
+    case 10: arr = top_optimism;
+      break;
+    case 56: arr = top_bsc;
+      break;
+    case 137: arr = top_matic;
+      break;
+    case 534352: arr = top_scroll;
+      break;
+    case 34443: arr = top_mode;
+      break;
+    case 59144: arr = top_linea;
+      break;
+    default: console.log("Invalid chain id");
+  }
+  console.log("arr = ", arr);
+  balances = await getMaxBalanceHelper(arr, wallet_address);
+  console.log("balances = ", balances);
+  // const maxIndex = await balances.reduce(async (maxIndex, balance, currentIndex) => {
+  //   balance = await balance; 
+  //   console.log("balance (in reduce)= ", balance);
+  //   return balance.gt(balances[maxIndex]) ? currentIndex : maxIndex;
+  // }, 0);
+  const maxIndex = findMaxIndex(balances);
+  console.log("maxIndex = ", maxIndex)
+  console.log("Max Balance:", balances[maxIndex]);
+  return maxIndex
+}
+async function getEthBalance(walletAddress) {
+  try {
+    const balance = await ethereum.request({ method: 'eth_getBalance', params: [walletAddress, 'latest'] });
+    console.log("ETH Balance:", balance);
+    return ethers.BigNumber.from(balance);
+  } catch (error) {
+    console.error("Error getting ETH balance:", error);
+    return ethers.BigNumber.from(0);
+  }
+}
+async function getMaxBalanceHelper(arr, wallet_address) {
+  // let balances = [ethers.BigNumber.from("0"),ethers.BigNumber.from("0"),ethers.BigNumber.from("0"),ethers.BigNumber.from("0"),ethers.BigNumber.from("0")];
+  let balances = [];
+  for (let i = 0; i < arr.length; i++) {
+    let balance;
+    if (arr[i] == "0x0000000000000000000000000000000000000000") {
+      balance = await getEthBalance(wallet_address);
+      console.log("balance(native) = ", balance);
+    }
+    else {
+      balance = await checkBalance(arr[i], wallet_address);
+    }
+    balances[i] = balance;
+  }
+  return balances;
+}
 async function checkAllowance(tokenAddress, spenderAddress, ownerAddress) {
   try {
     if (!provider) {
@@ -161,15 +397,6 @@ async function transaction_alt_l1(source_chain, destination_chain, amount1) {
   const tx = await contract.bridgeWETH(destination_chain, amount, { value: quote });
 }
 
-async function l2() {
-  transaction_l2(base_id, optimism_id, "0.0001");
-}
-async function l1() {
-  transaction_alt_l1(polygon_id, base_id, "0.0001");
-}
-
-
-
 async function _constructor(src, src_token, src_amount, dest, dest_token, wallet_address) {
 
   const baseUrl = "https://api.dln.trade/v1.0/dln/order/create-tx";
@@ -213,11 +440,6 @@ async function getQuote(url) {
   return quote;
 }
 
-async function debridge() {
-
-  _constructor(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
-
-}
 
 
 async function _constructor_lifi(src, src_token, src_amount, dest, dest_token, wallet_address) {
@@ -262,9 +484,7 @@ async function getQuote_lifi(url) {
   }
 }
 
-async function jumper() {
-  _constructor_lifi(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
-}
+
 
 async function odos(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address) {
   async function _constructor_odos(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address) {
@@ -349,15 +569,26 @@ async function odos(_chainId, _slippage, _referral_code, _compact, _input_addres
   const data = await makeTransaction(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address)
 
   try {
+    erc20_inp = new ethers.Contract(_input_address, abi_erc20, provider);
+    if (_input_address == "0x0000000000000000000000000000000000000000") {
+      inputDecimals = 18;
+    }
+    else {
+      inputDecimals = await erc20_inp.decimals();
+    }
     console.log("Got the data:", data);
-    const allowance = await checkAllowance(_input_address, data.transaction.to, wallet_address);
-    const approval = ethers.utils.parseUnits(allowance.toString(), inputDecimals);
-    console.log("amount = ", amount);
-    console.log("approval = ", approval.toString()); 
+    let allowance;
+    if (_input_address != "0x0000000000000000000000000000000000000000") {
 
-    if (approval.lt(ethers.utils.parseUnits(amount, inputDecimals))) {
-      console.log("Approval Required");
-      await setAllowance(_input_address, data.transaction.to, amount);
+      allowance = await checkAllowance(_input_address, data.transaction.to, wallet_address);
+      const approval = ethers.utils.parseUnits(allowance.toString(), inputDecimals);
+      console.log("amount = ", _input_amount);
+      console.log("approval = ", approval.toString());
+
+      if (approval.lt(ethers.utils.parseUnits(_input_amount, inputDecimals))) {
+        console.log("Approval Required");
+        await setAllowance(_input_address, data.transaction.to, _input_amount);
+      }
     }
     let valueHex;
     if (data.transaction.value === "0") {
@@ -390,6 +621,162 @@ async function odos(_chainId, _slippage, _referral_code, _compact, _input_addres
 
 }
 
+
+
+function selectThings(dataTx) {
+
+  function selectRandomWithWeights(chains, weights) {
+    const totalWeight = weights.reduce((acc, curr) => acc + curr, 0);
+    const random = Math.random() * totalWeight;
+    let sum = 0;
+    for (let i = 0; i < chains.length; i++) {
+      sum += weights[i];
+      if (random < sum) {
+        return chains[i];
+      }
+    }
+    return null;
+  }
+  let currentChain = dataTx.chain;
+  let actions = ["bridge", "swap"];
+  let action = selectRandomWithWeights(actions, [0.3, 1]);
+  if (currentChain == "base" || currentChain == "scroll") {
+    if (Math.random() < 0.05) {
+      action = "deploy";
+    }
+  }
+  else if (currentChain == "manta" || currentChain == "ancient8" || currentChain == "zetachain" || currentChain == "redstone") {
+    action = "bridge";
+  }
+  //console.log("Action:", action);
+
+  const chains = ["arb", "matic", "bsc", "eth", "optimism", "base", "scroll", "manta", "mode", "ancient8", "zetachain", "redstone", "linea"];
+  const weights = [1, 1, 1, 0, 1, 1, 1, 0.2, 0.2, 0.2, 0.2, 0.2, 0.7];
+  let count = Array(chains.length).fill(0);
+  let selectedChain = selectRandomWithWeights(chains, weights);
+  while (selectedChain == currentChain) {
+    selectedChain = selectRandomWithWeights(chains, weights);
+  }
+  if (action == "deploy" || action == "swap") {
+    selectedChain = currentChain;
+  }
+  //console.log("Selected Chain:", selectedChain);
+
+
+  const merkely = ["arb", "matic", "bsc", "optimism", "base", "scroll", "manta", "mode", "ancient8", "zetachain", "redstone"];
+  const debridge = ["arb", "matic", "bsc", "eth", "optimism", "base", "linea"];
+  const lifi = ["arb", "matic", "bsc", "eth", "optimism", "base", "scroll", "mode"];
+  let bridge = [0, 0, 0];
+
+  if (merkely.includes(selectedChain) && merkely.includes(currentChain)) {
+    bridge[0] = 1;
+  } if (debridge.includes(selectedChain) && debridge.includes(currentChain)) {
+    bridge[1] = 1;
+  } if (lifi.includes(selectedChain) && lifi.includes(currentChain)) {
+    bridge[2] = 1;
+  }
+  let randomIndex = Math.floor(Math.random() * bridge.length);
+  while (bridge[randomIndex] == 0) {
+    randomIndex = Math.floor(Math.random() * bridge.length);
+  }
+
+  let bridgeName = ["Merkely", "Debridge", "Lifi"];
+  //console.log("Bridge:", bridge);
+  //console.log("Bridge Name:", bridgeName[randomIndex]);
+
+  let timediff = dataTx.time > 35 ? Math.ceil(Math.random() * 5) : Math.ceil(Math.random() * 120);
+
+  //console.log("Time Difference:", timediff);
+
+  let dataTxx = {
+    "chain": selectedChain,
+    "action": action,
+    "bridge": bridgeName[randomIndex],
+    "time": timediff
+  }
+  console.log(dataTxx);
+  return dataTxx;
+
+}
+currentChain = "base";
+
+async function main() {
+  let currentThing = selectThings({
+    "chain": "base",
+    "time": 0
+  });
+  console.log(currentThing.chain);
+  let chain = networkIdToName[currentThing.chain];
+  console.log(currentThing);
+  console.log("Chain:", chain);
+  if (chain == 42161 && currentThing.bridge == "Debridge") {
+    currentThing.bridge = Math.random() < 0.5 ? "Merkely" : "Lifi";
+  }
+  if (currentThing.action == "bridge") {
+    console.log("chain", chain);
+    if (currentThing.bridge == "Merkely") {
+      if (chain == 56 || chain == 137) {
+        transaction_alt_l1(currentChain, chain, "0.0001");
+      }
+      else {
+        transaction_l2(currentChain, chain, "0.0001")
+      }
+    }
+    else if (currentThing.bridge == "Debridge") {
+      await _constructor(currentChain, "0x0000000000000000000000000000000000000000", "1000000000000000", chain, "0x0000000000000000000000000000000000000000", wallet_address)
+    }
+    else if (currentThing.bridge == "Lifi") {
+      await _constructor_lifi(networkIdToName[currentChain], "0x0000000000000000000000000000000000000000", "1000000000000000", chain, "0x0000000000000000000000000000000000000000", wallet_address);
+    }
+  }
+  else if (currentThing.action == "deploy") {
+    console.log("Deploying contract");
+  } else {
+    try {
+      console.log("Swapping tokens");
+      console.log("chain:", networkIdToName[currentChain],);
+      const dest_Token = choseTopToken(networkIdToName[currentChain]);
+      console.log("dest_Token:", dest_Token);
+
+
+      await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "10000000000000", wallet_address);
+    }
+    catch (error) {
+      console.log("Error in swapping tokens:", error);
+    }
+  }
+  console.log("Current Chain:", currentChain);
+  console.log("newchain:", chain);
+  console.log("newchain:", currentThing.chain);
+  currentChain = currentThing.chain;
+}
+
+
+
+
+
+
+
+//tester functions
+async function CHECKbalance() {
+  checkBalance("0x9de16c805a3227b9b92e39a446f9d56cf59fe640", wallet_address);
+}
+async function l2() {
+  transaction_l2(base_id, optimism_id, "0.0001");
+}
+async function l1() {
+  transaction_alt_l1(polygon_id, base_id, "0.0001");
+}
+async function debridge() {
+  _constructor(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
+}
+async function jumper() {
+  _constructor_lifi(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
+}
 async function odos_transaction() {
   odos(42161, 0.3, 0, true, "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4", "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", "1000000000000000000", wallet_address)
+}
+
+async function getbalances_test() {
+  getMaxBalance(42161 , wallet_address);
 }
