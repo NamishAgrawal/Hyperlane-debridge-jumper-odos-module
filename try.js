@@ -239,9 +239,6 @@ async function getPrice(addr) {
 }
 
 
-async function getPrice_test(){
-  getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
-}
 
 async function checkBalance(tokenAddress, ownerAddress) {
   try {
@@ -779,4 +776,8 @@ async function odos_transaction() {
 
 async function getbalances_test() {
   getMaxBalance(42161 , wallet_address);
+}
+
+async function getPrice_test(){
+  getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
 }
