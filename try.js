@@ -7,19 +7,16 @@ let currentChain;
 
 const switchNetwork = async (networkId) => {
   try {
-    // Ensure the MetaMask provider is available
     if (!window.ethereum) {
       console.error("MetaMask provider not found");
       return;
     }
 
-    // Request switching to the desired network
     await window.ethereum.request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: `0x${networkId.toString(16)}` }], // Convert networkId to hex format
+      params: [{ chainId: `0x${networkId.toString(16)}` }],
     });
 
-    // Optionally, you can listen for network change events
     window.ethereum.on('chainChanged', (chainId) => {
       console.log(`Switched to chainId: ${chainId}`);
       alert(`Switched to chainId: ${chainId}`);
@@ -195,15 +192,16 @@ function choseTopToken(chainId) {
 async function getQuote() {
 
   const contract = new ethers.Contract(base, abi, signer);
-  const domain = 10; // Optimism 
-  const amount = ethers.utils.parseEther("0.001"); // Will bridge 0.01 ETH
+  const domain = 10;
+  const amount = ethers.utils.parseEther("0.001");
   const quote = await contract.quoteBridge(domain, amount);
   // only for L2s (have eth as native token)
   const tx = await contract.bridgeETH(domain, amount, { value: amount.add(quote) });
 }
 async function transaction_l2(source_chain, destination_chain, amount1) {
   const contract = new ethers.Contract(addressesMapping[source_chain], abi, signer);
-  const amount = ethers.utils.parseEther(amount1);
+  // const amount = ethers.utils.parseEther(amount1);
+  const amount = amount1;
   const quote = await contract.quoteBridge(destination_chain, amount);
   console.log(quote);
   const tx = await contract.bridgeETH(destination_chain, amount, { value: amount.add(quote) });
@@ -229,12 +227,12 @@ const abi_erc20 = [
 
 async function getPrice(addr) {
   try {
-      const priceFeed = new ethers.Contract(addr, aggregatorV3InterfaceABI, provider);
-      const roundData = await priceFeed.latestRoundData();
-      console.log("Latest Round Data:", roundData);
-      // Process the roundData as needed
+    const priceFeed = new ethers.Contract(addr, aggregatorV3InterfaceABI, provider);
+    const roundData = await priceFeed.latestRoundData();
+    console.log("Latest Round Data:", roundData);
+    // Process the roundData as needed
   } catch (error) {
-      console.error("Error fetching price data:", error);
+    console.error("Error fetching price data:", error);
   }
 }
 
@@ -245,6 +243,9 @@ async function checkBalance(tokenAddress, ownerAddress) {
     if (!provider) {
       console.error("Provider not initialized. Please connect to a node first.");
       return null;
+    }
+    if(tokenAddress == "0x0000000000000000000000000000000000000000"){
+      return getEthBalance(ownerAddress);
     }
     const token = new ethers.Contract(tokenAddress, abi_erc20, provider);
     console.log("Token:", token);
@@ -262,10 +263,10 @@ function findMaxIndex(arr) {
     return -1; // Empty array
   }
 
-  let maxIndex = 0;
-  let maxValue = arr[0];
+  let maxIndex = 1;
+  let maxValue = arr[1];
 
-  for (let i = 1; i < arr.length; i++) {
+  for (let i = 2; i < arr.length; i++) {
     if (arr[i].gt(maxValue)) {
       maxIndex = i;
       maxValue = arr[i];
@@ -298,11 +299,6 @@ async function getMaxBalance(chainid, wallet_address) {
   console.log("arr = ", arr);
   balances = await getMaxBalanceHelper(arr, wallet_address);
   console.log("balances = ", balances);
-  // const maxIndex = await balances.reduce(async (maxIndex, balance, currentIndex) => {
-  //   balance = await balance; 
-  //   console.log("balance (in reduce)= ", balance);
-  //   return balance.gt(balances[maxIndex]) ? currentIndex : maxIndex;
-  // }, 0);
   const maxIndex = findMaxIndex(balances);
   console.log("maxIndex = ", maxIndex)
   console.log("Max Balance:", balances[maxIndex]);
@@ -334,6 +330,49 @@ async function getMaxBalanceHelper(arr, wallet_address) {
   }
   return balances;
 }
+
+async function convertAllToEth(chainId, wallet_address) {
+  // let balances = await getMaxBalanceHelper(chainId, wallet_address);
+  // for(let i=1;i<balances.length;i++){
+
+  // }
+  let maxIndex = await getMaxBalance(chainId, wallet_address);
+  let arr;
+  switch (chainId) {
+    case 8453: arr = top_base;
+      break;
+    case 42161: arr = top_arb;
+      break;
+    case 10: arr = top_optimism;
+      break;
+    case 56: arr = top_bsc;
+      break;
+    case 137: arr = top_matic;
+      break;
+    case 534352: arr = top_scroll;
+      break;
+    case 34443: arr = top_mode;
+      break;
+    case 59144: arr = top_linea;
+      break;
+    default: console.log("Invalid chain id");
+  }
+  while (true) {
+    let tokenAddress = arr[maxIndex];
+    let balance = await checkBalance(tokenAddress, wallet_address);
+    console.log("balance = ", balance);
+    let balance1 = balance.toString();
+    console.log("balance1 = ", balance1);
+    if (balance1 == "0") {
+      console.log("No balance to convert");
+      return; 
+    }
+    else {
+      await odos(chainId, 0.3, 0, true, tokenAddress, "0x0000000000000000000000000000000000000000", balance1, wallet_address)
+    }
+  }
+}
+
 async function checkAllowance(tokenAddress, spenderAddress, ownerAddress) {
   try {
     if (!provider) {
@@ -376,7 +415,8 @@ const weth_add = {
 
 async function transaction_alt_l1(source_chain, destination_chain, amount1) {
   const contract = new ethers.Contract(addressesMapping[source_chain], abi, signer);
-  const amount = ethers.utils.parseEther(amount1);
+  // const amount = ethers.utils.parseEther(amount1);
+  const amount = amount1;
   console.log(weth_add[source_chain], addressesMapping[source_chain], wallet_address)
   const allowance = await checkAllowance(weth_add[source_chain], addressesMapping[source_chain], wallet_address);
   const approval = ethers.utils.parseEther(allowance.toString());
@@ -710,20 +750,41 @@ async function main() {
     currentThing.bridge = Math.random() < 0.5 ? "Merkely" : "Lifi";
   }
   if (currentThing.action == "bridge") {
-    console.log("chain", chain);
+
+    await convertAllToEth(networkIdToName[currentChain], wallet_address);
+
+    let EthBalance = await getEthBalance(wallet_address);
+    let transferBalance = (EthBalance.mul(ethers.BigNumber.from(90)).div(ethers.BigNumber.from(100))).toString();
+    EthBalance = EthBalance.toString();
+    console.log("Eth Balance:", EthBalance);
+    if (EthBalance == "0") {
+      console.log("No Eth Balance");
+      return;
+    }
+    // transferBalance = ethers.utils.formatEther(transferBalance);
+    console.log("Transfer Balance:", transferBalance);
     if (currentThing.bridge == "Merkely") {
+      console.log("Merkelying");
       if (chain == 56 || chain == 137) {
-        transaction_alt_l1(currentChain, chain, "0.0001");
+        await transaction_alt_l1(currentChain, chain, transferBalance);
       }
       else {
-        transaction_l2(currentChain, chain, "0.0001")
+        await transaction_l2(currentChain, chain, transferBalance)
       }
     }
     else if (currentThing.bridge == "Debridge") {
-      await _constructor(currentChain, "0x0000000000000000000000000000000000000000", "1000000000000000", chain, "0x0000000000000000000000000000000000000000", wallet_address)
+      console.log("Debridging");
+      console.log("Current Chain:", networkIdToName[currentChain]);
+      console.log("newchain:", chain);
+      console.log(wallet_address)
+      await _constructor(networkIdToName[currentChain], "0x0000000000000000000000000000000000000000", transferBalance, chain, "0x0000000000000000000000000000000000000000", wallet_address)
     }
     else if (currentThing.bridge == "Lifi") {
-      await _constructor_lifi(networkIdToName[currentChain], "0x0000000000000000000000000000000000000000", "1000000000000000", chain, "0x0000000000000000000000000000000000000000", wallet_address);
+      console.log("lifing");
+      console.log("Current Chain:", networkIdToName[currentChain]);
+      console.log("newchain:", chain);
+      console.log(wallet_address)
+      await _constructor_lifi(networkIdToName[currentChain], "0x0000000000000000000000000000000000000000", transferBalance, chain, "0x0000000000000000000000000000000000000000", wallet_address);
     }
   }
   else if (currentThing.action == "deploy") {
@@ -735,8 +796,8 @@ async function main() {
       const dest_Token = choseTopToken(networkIdToName[currentChain]);
       console.log("dest_Token:", dest_Token);
 
-
-      await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "10000000000000", wallet_address);
+      console.log("swapping")
+      // await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "10000000000000", wallet_address);
     }
     catch (error) {
       console.log("Error in swapping tokens:", error);
@@ -771,13 +832,16 @@ async function jumper() {
   _constructor_lifi(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
 }
 async function odos_transaction() {
-  odos(42161, 0.3, 0, true, "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4", "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", "1000000000000000000", wallet_address)
+  odos(8453, 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "1000000000000000000", wallet_address)
 }
 
 async function getbalances_test() {
-  getMaxBalance(42161 , wallet_address);
+  getMaxBalance(8453, wallet_address);
 }
 
-async function getPrice_test(){
+async function getPrice_test() {
   getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
+}
+async function convertAllToEth_test() {
+  convertAllToEth(8453, wallet_address);
 }
