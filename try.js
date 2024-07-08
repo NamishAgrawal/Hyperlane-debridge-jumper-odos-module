@@ -4,7 +4,7 @@ let signer;
 let inputDecimals;
 let wallet_address;
 let currentChain;
-
+let __chainId;
 const switchNetwork = async (networkId) => {
   try {
     if (!window.ethereum) {
@@ -19,7 +19,8 @@ const switchNetwork = async (networkId) => {
 
     window.ethereum.on('chainChanged', (chainId) => {
       console.log(`Switched to chainId: ${chainId}`);
-      alert(`Switched to chainId: ${chainId}`);
+      __chainId = networkId;
+      // alert(`Switched to chainId: ${chainId}`);
     });
 
     console.log(`Switched to networkId: ${networkId}`);
@@ -35,7 +36,7 @@ connectBtn.addEventListener("click", async () => {
       alert("Please install a web3 wallet like MetaMask.");
       return;
     }
-    provider = new ethers.providers.Web3Provider(window.ethereum)
+    provider = new ethers.providers.Web3Provider(window.ethereum,"any")
     account = await provider.send("eth_requestAccounts", []);
     console.log(account[0]);
     signer = provider.getSigner();
@@ -244,7 +245,8 @@ async function checkBalance(tokenAddress, ownerAddress) {
       console.error("Provider not initialized. Please connect to a node first.");
       return null;
     }
-    if(tokenAddress == "0x0000000000000000000000000000000000000000"){
+    if (tokenAddress == "0x0000000000000000000000000000000000000000") {
+      console.log("Native Token");
       return getEthBalance(ownerAddress);
     }
     const token = new ethers.Contract(tokenAddress, abi_erc20, provider);
@@ -365,7 +367,7 @@ async function convertAllToEth(chainId, wallet_address) {
     console.log("balance1 = ", balance1);
     if (balance1 == "0") {
       console.log("No balance to convert");
-      return; 
+      return;
     }
     else {
       await odos(chainId, 0.3, 0, true, tokenAddress, "0x0000000000000000000000000000000000000000", balance1, wallet_address)
@@ -736,12 +738,14 @@ function selectThings(dataTx) {
 
 }
 currentChain = "base";
-
-async function main() {
+let c = 1;
+async function main(datatxx) {
+  
   let currentThing = selectThings({
-    "chain": "base",
-    "time": 0
+    "chain": datatxx.chain,
+    "time": datatxx.time
   });
+  
   console.log(currentThing.chain);
   let chain = networkIdToName[currentThing.chain];
   console.log(currentThing);
@@ -764,6 +768,7 @@ async function main() {
     // transferBalance = ethers.utils.formatEther(transferBalance);
     console.log("Transfer Balance:", transferBalance);
     if (currentThing.bridge == "Merkely") {
+      try{
       console.log("Merkelying");
       if (chain == 56 || chain == 137) {
         await transaction_alt_l1(currentChain, chain, transferBalance);
@@ -772,20 +777,35 @@ async function main() {
         await transaction_l2(currentChain, chain, transferBalance)
       }
     }
+    catch(error){
+      console.log("Error in merkelying:",error);
+    
+    }
+    }
     else if (currentThing.bridge == "Debridge") {
+      try{
       console.log("Debridging");
       console.log("Current Chain:", networkIdToName[currentChain]);
       console.log("newchain:", chain);
       console.log(wallet_address)
       await _constructor(networkIdToName[currentChain], "0x0000000000000000000000000000000000000000", transferBalance, chain, "0x0000000000000000000000000000000000000000", wallet_address)
+      }
+      catch(error){
+        console.log("Error in debridging:",error);
+      }
     }
     else if (currentThing.bridge == "Lifi") {
+      try{
       console.log("lifing");
       console.log("Current Chain:", networkIdToName[currentChain]);
       console.log("newchain:", chain);
       console.log(wallet_address)
       await _constructor_lifi(networkIdToName[currentChain], "0x0000000000000000000000000000000000000000", transferBalance, chain, "0x0000000000000000000000000000000000000000", wallet_address);
     }
+    catch(error){
+      console.log("Error in lifing:",error);
+    }
+  }
   }
   else if (currentThing.action == "deploy") {
     console.log("Deploying contract");
@@ -793,11 +813,15 @@ async function main() {
     try {
       console.log("Swapping tokens");
       console.log("chain:", networkIdToName[currentChain],);
-      const dest_Token = choseTopToken(networkIdToName[currentChain]);
+      let dest_Token = choseTopToken(networkIdToName[currentChain]);
+      while (dest_Token == "0x0000000000000000000000000000000000000000") {
+        dest_Token = choseTopToken(networkIdToName[currentChain]);
+      }
       console.log("dest_Token:", dest_Token);
-
-      console.log("swapping")
-      // await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "10000000000000", wallet_address);
+      let amountToSwap = await checkBalance("0x0000000000000000000000000000000000000000", wallet_address);
+      amountToSwap = (amountToSwap.mul(ethers.BigNumber.from(80)).div(ethers.BigNumber.from(100))).toString()
+      console.log("swapping amount = ",amountToSwap)
+      // await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", dest_Token, amountToSwap, wallet_address);
     }
     catch (error) {
       console.log("Error in swapping tokens:", error);
@@ -806,7 +830,23 @@ async function main() {
   console.log("Current Chain:", currentChain);
   console.log("newchain:", chain);
   console.log("newchain:", currentThing.chain);
+  if(currentThing.action == "bridge"){
   currentChain = currentThing.chain;
+  }
+  let dataTxx = {
+    "chain": currentChain,
+    "time": currentThing.time
+  }
+  c++;
+  console.log("DataTxx:", dataTxx);
+  console.log("currentThing.time",currentThing.time)
+  await switchNetwork(chain);
+  // setTimeout(main(dataTxx), currentThing.timediff * 1000*60);
+  // await setTimeout(()=>{console.log("timeout")},
+  //    currentThing.timediff * 1000 * 60,);
+  await setTimeout(main, currentThing.time * 1000 , dataTxx);
+
+  // main(dataTxx);
 }
 
 
@@ -838,10 +878,20 @@ async function odos_transaction() {
 async function getbalances_test() {
   getMaxBalance(8453, wallet_address);
 }
-
+async function getbalance_test(){
+  console.log(await checkBalance("0x0000000000000000000000000000000000000000", wallet_address));
+}
 async function getPrice_test() {
   getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
 }
 async function convertAllToEth_test() {
   convertAllToEth(8453, wallet_address);
+}
+
+async function main_test() {
+  let dataTxx = {
+    "chain": "base",
+    "time": "1"
+  }
+  main(dataTxx);
 }
