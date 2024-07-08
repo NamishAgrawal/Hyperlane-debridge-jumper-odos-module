@@ -107,7 +107,7 @@ const abi = [
   "function bridgeETH(uint32 _destination, uint amount) public payable returns (bytes32 messageId)",
   "function bridgeWETH(uint32 _destination, uint amount) public payable returns (bytes32 messageId)",
 ]
-// const token = new ethers.Contract(tokenAddress, abi, provider);
+
 
 const aggregatorV3InterfaceABI = [
   {
@@ -196,20 +196,15 @@ async function getQuote() {
   const domain = 10;
   const amount = ethers.utils.parseEther("0.001");
   const quote = await contract.quoteBridge(domain, amount);
-  // only for L2s (have eth as native token)
   const tx = await contract.bridgeETH(domain, amount, { value: amount.add(quote) });
 }
 async function transaction_l2(source_chain, destination_chain, amount1) {
   const contract = new ethers.Contract(addressesMapping[source_chain], abi, signer);
-  // const amount = ethers.utils.parseEther(amount1);
   const amount = amount1;
   const quote = await contract.quoteBridge(destination_chain, amount);
   console.log(quote);
   const tx = await contract.bridgeETH(destination_chain, amount, { value: amount.add(quote) });
 }
-// only for alt L1s (bsc, polygon, etc.) 
-// TODO: ensure bridge contract is approved to spend WETH 
-// const tx = await contract.bridgeWETH(domain, amount, { value: quote });
 
 const abi_erc20 = [
   // Read-Only Functions
@@ -231,7 +226,6 @@ async function getPrice(addr) {
     const priceFeed = new ethers.Contract(addr, aggregatorV3InterfaceABI, provider);
     const roundData = await priceFeed.latestRoundData();
     console.log("Latest Round Data:", roundData);
-    // Process the roundData as needed
   } catch (error) {
     console.error("Error fetching price data:", error);
   }
@@ -262,7 +256,7 @@ async function checkBalance(tokenAddress, ownerAddress) {
 }
 function findMaxIndex(arr) {
   if (!arr || arr.length === 0) {
-    return -1; // Empty array
+    return -1;
   }
 
   let maxIndex = 1;
@@ -317,8 +311,6 @@ async function getEthBalance(walletAddress) {
   }
 }
 async function getMaxBalanceHelper(arr, wallet_address) {
-  // let balances = [ethers.BigNumber.from("0"),ethers.BigNumber.from("0"),ethers.BigNumber.from("0"),ethers.BigNumber.from("0"),ethers.BigNumber.from("0")];
-  let balances = [];
   for (let i = 0; i < arr.length; i++) {
     let balance;
     if (arr[i] == "0x0000000000000000000000000000000000000000") {
@@ -334,10 +326,6 @@ async function getMaxBalanceHelper(arr, wallet_address) {
 }
 
 async function convertAllToEth(chainId, wallet_address) {
-  // let balances = await getMaxBalanceHelper(chainId, wallet_address);
-  // for(let i=1;i<balances.length;i++){
-
-  // }
   let maxIndex = await getMaxBalance(chainId, wallet_address);
   let arr;
   switch (chainId) {
@@ -417,7 +405,7 @@ const weth_add = {
 
 async function transaction_alt_l1(source_chain, destination_chain, amount1) {
   const contract = new ethers.Contract(addressesMapping[source_chain], abi, signer);
-  // const amount = ethers.utils.parseEther(amount1);
+
   const amount = amount1;
   console.log(weth_add[source_chain], addressesMapping[source_chain], wallet_address)
   const allowance = await checkAllowance(weth_add[source_chain], addressesMapping[source_chain], wallet_address);
@@ -563,8 +551,7 @@ async function odos(_chainId, _slippage, _referral_code, _compact, _input_addres
 
     if (response.status === 200) {
       const quote = await response.json();
-      //console.log('ODOS Quote:', quote);
-      //console.log("the output amount is :", quote.outAmounts[0]);
+
       return await quote;
     } else {
       console.error('Error in Quote:', response);
@@ -577,7 +564,7 @@ async function odos(_chainId, _slippage, _referral_code, _compact, _input_addres
     const quote = await _constructor_odos(_chainId, _slippage, _referral_code, _compact, _input_address, _output_address, _input_amount, _user_address)
     const address = _user_address;
     const pathId = quote.pathId;
-    //console.log(pathId);
+
 
     const transactionUrl = "https://api.odos.xyz/sor/assemble";
     const transactionRequestBody = {
@@ -598,7 +585,7 @@ async function odos(_chainId, _slippage, _referral_code, _compact, _input_addres
 
     if (response.status === 200) {
       const transaction = await response.json();
-      //console.log('Transaction:', transaction);
+;
       return await transaction;
     } else {
       console.error('Error in Transaction:', response);
@@ -650,12 +637,11 @@ async function odos(_chainId, _slippage, _referral_code, _compact, _input_addres
     });
     console.log("Transaction sent! Hash:", sentTx.hash);
 
-    // Optionally, wait for transaction confirmation
     const receipt = await sentTx.wait();
     console.log("Transaction confirmed! Block number:", receipt.blockNumber);
   } catch (error) {
     console.error("Error handling swap:", error);
-    // Handle errors appropriately (e.g., display user-friendly message)
+
   }
 
 }
@@ -687,7 +673,7 @@ function selectThings(dataTx) {
   else if (currentChain == "manta" || currentChain == "ancient8" || currentChain == "zetachain" || currentChain == "redstone") {
     action = "bridge";
   }
-  //console.log("Action:", action);
+
 
   const chains = ["arb", "matic", "bsc", "eth", "optimism", "base", "scroll", "manta", "mode", "ancient8", "zetachain", "redstone", "linea"];
   const weights = [1, 1, 1, 0, 1, 1, 1, 0.2, 0.2, 0.2, 0.2, 0.2, 0.7];
@@ -699,7 +685,7 @@ function selectThings(dataTx) {
   if (action == "deploy" || action == "swap") {
     selectedChain = currentChain;
   }
-  //console.log("Selected Chain:", selectedChain);
+
 
 
   const merkely = ["arb", "matic", "bsc", "optimism", "base", "scroll", "manta", "mode", "ancient8", "zetachain", "redstone"];
@@ -720,12 +706,11 @@ function selectThings(dataTx) {
   }
 
   let bridgeName = ["Merkely", "Debridge", "Lifi"];
-  //console.log("Bridge:", bridge);
+
   //console.log("Bridge Name:", bridgeName[randomIndex]);
 
   let timediff = dataTx.time > 35 ? Math.ceil(Math.random() * 5) : Math.ceil(Math.random() * 120);
 
-  //console.log("Time Difference:", timediff);
 
   let dataTxx = {
     "chain": selectedChain,
@@ -765,7 +750,6 @@ async function main(datatxx) {
       console.log("No Eth Balance");
       return;
     }
-    // transferBalance = ethers.utils.formatEther(transferBalance);
     console.log("Transfer Balance:", transferBalance);
     if (currentThing.bridge == "Merkely") {
       try{
@@ -821,7 +805,7 @@ async function main(datatxx) {
       let amountToSwap = await checkBalance("0x0000000000000000000000000000000000000000", wallet_address);
       amountToSwap = (amountToSwap.mul(ethers.BigNumber.from(80)).div(ethers.BigNumber.from(100))).toString()
       console.log("swapping amount = ",amountToSwap)
-      // await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", dest_Token, amountToSwap, wallet_address);
+      await odos(networkIdToName[currentChain], 0.3, 0, true, "0x0000000000000000000000000000000000000000", dest_Token, amountToSwap, wallet_address);
     }
     catch (error) {
       console.log("Error in swapping tokens:", error);
@@ -841,51 +825,8 @@ async function main(datatxx) {
   console.log("DataTxx:", dataTxx);
   console.log("currentThing.time",currentThing.time)
   await switchNetwork(chain);
-  // setTimeout(main(dataTxx), currentThing.timediff * 1000*60);
-  // await setTimeout(()=>{console.log("timeout")},
-  //    currentThing.timediff * 1000 * 60,);
-  await setTimeout(main, currentThing.time * 1000 , dataTxx);
+  setTimeout(main, currentThing.time * 1000* 60, dataTxx);
 
-  // main(dataTxx);
-}
-
-
-
-
-
-
-
-//tester functions
-async function CHECKbalance() {
-  checkBalance("0x9de16c805a3227b9b92e39a446f9d56cf59fe640", wallet_address);
-}
-async function l2() {
-  transaction_l2(base_id, optimism_id, "0.0001");
-}
-async function l1() {
-  transaction_alt_l1(polygon_id, base_id, "0.0001");
-}
-async function debridge() {
-  _constructor(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
-}
-async function jumper() {
-  _constructor_lifi(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
-}
-async function odos_transaction() {
-  odos(8453, 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "1000000000000000000", wallet_address)
-}
-
-async function getbalances_test() {
-  getMaxBalance(8453, wallet_address);
-}
-async function getbalance_test(){
-  console.log(await checkBalance("0x0000000000000000000000000000000000000000", wallet_address));
-}
-async function getPrice_test() {
-  getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
-}
-async function convertAllToEth_test() {
-  convertAllToEth(8453, wallet_address);
 }
 
 async function main_test() {
@@ -895,3 +836,41 @@ async function main_test() {
   }
   main(dataTxx);
 }
+
+
+
+
+
+//tester functions
+// async function CHECKbalance() {
+//   checkBalance("0x9de16c805a3227b9b92e39a446f9d56cf59fe640", wallet_address);
+// }
+// async function l2() {
+//   transaction_l2(base_id, optimism_id, "0.0001");
+// }
+// async function l1() {
+//   transaction_alt_l1(polygon_id, base_id, "0.0001");
+// }
+// async function debridge() {
+//   _constructor(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
+// }
+// async function jumper() {
+//   _constructor_lifi(8453, "0x0000000000000000000000000000000000000000", "1000000000000000", 42161, "0x0000000000000000000000000000000000000000", wallet_address)
+// }
+// async function odos_transaction() {
+//   odos(8453, 0.3, 0, true, "0x0000000000000000000000000000000000000000", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "1000000000000000000", wallet_address)
+// }
+
+// async function getbalances_test() {
+//   getMaxBalance(8453, wallet_address);
+// }
+// async function getbalance_test(){
+//   console.log(await checkBalance("0x0000000000000000000000000000000000000000", wallet_address));
+// }
+// async function getPrice_test() {
+//   getPrice("0x000000000x7ceb23fd6bc0add59e62ac25578270cff1b9f619");
+// }
+// async function convertAllToEth_test() {
+//   convertAllToEth(8453, wallet_address);
+// }
+
