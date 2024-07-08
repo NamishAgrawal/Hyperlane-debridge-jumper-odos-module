@@ -6,6 +6,7 @@
 ## Development Status
 This project is currently in active development. The plan is to consolidate all modules into a single JavaScript file for streamlined deployment and execution.
 **Update:** consolidated all of them in a single file(index.js)
+
 ## Features
 - **Multi-Bridge Integration:** Utilize Hyperlane, Debridge, Jumper, and Odos for chain-to-chain transactions and activity.
 - **Randomized Chain Switching:** Enhance security and avoid bot detection with randomized chain movements and random swaps and.
