@@ -5,6 +5,7 @@
 
 ## Development Status
 This project is currently in active development. The plan is to consolidate all modules into a single JavaScript file for streamlined deployment and execution.
+
 **Update:** consolidated all of them in a single file(index.js)
 
 ## Features
@@ -13,7 +14,7 @@ This project is currently in active development. The plan is to consolidate all 
 - **Onchain Footprint Optimization:** Maximize onchain activity to increase engagement and network presence.
 
 ## Roadmap (Future Plans)
-~~ Consolidate modules into a single JavaScript file for browser based wallets.~~
+~-Consolidate modules into a single JavaScript file for browser based wallets.~
 - make a version using nodeJs for automatic trasactions.
 - Conduct testing and optimization for performance and security.
 
