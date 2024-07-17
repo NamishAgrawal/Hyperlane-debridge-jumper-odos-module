@@ -273,6 +273,7 @@ function findMaxIndex(arr) {
 }
 async function getMaxBalance(chainid, wallet_address) {
   let arr;
+  let balances;
   switch (chainid) {
     case 8453: arr = top_base;
       break;
@@ -311,6 +312,7 @@ async function getEthBalance(walletAddress) {
   }
 }
 async function getMaxBalanceHelper(arr, wallet_address) {
+  let balances=[];
   for (let i = 0; i < arr.length; i++) {
     let balance;
     if (arr[i] == "0x0000000000000000000000000000000000000000") {
@@ -326,7 +328,7 @@ async function getMaxBalanceHelper(arr, wallet_address) {
 }
 
 async function convertAllToEth(chainId, wallet_address) {
-  let maxIndex = await getMaxBalance(chainId, wallet_address);
+  // let maxIndex = await getMaxBalance(chainId, wallet_address);
   let arr;
   switch (chainId) {
     case 8453: arr = top_base;
@@ -348,6 +350,7 @@ async function convertAllToEth(chainId, wallet_address) {
     default: console.log("Invalid chain id");
   }
   while (true) {
+    let maxIndex = await getMaxBalance(chainId, wallet_address);
     let tokenAddress = arr[maxIndex];
     let balance = await checkBalance(tokenAddress, wallet_address);
     console.log("balance = ", balance);
@@ -666,7 +669,7 @@ function selectThings(dataTx) {
   let actions = ["bridge", "swap"];
   let action = selectRandomWithWeights(actions, [0.3, 1]);
   if (currentChain == "base" || currentChain == "scroll") {
-    if (Math.random() < 0.05) {
+    if (Math.random() < 0.01) {
       action = "deploy";
     }
   }
@@ -696,7 +699,7 @@ function selectThings(dataTx) {
   if (merkely.includes(selectedChain) && merkely.includes(currentChain)) {
     bridge[0] = 1;
   } if (debridge.includes(selectedChain) && debridge.includes(currentChain)) {
-    bridge[1] = 1;
+    bridge[1] = 1;                                                                               
   } if (lifi.includes(selectedChain) && lifi.includes(currentChain)) {
     bridge[2] = 1;
   }
@@ -735,6 +738,8 @@ async function main(datatxx) {
   let chain = networkIdToName[currentThing.chain];
   console.log(currentThing);
   console.log("Chain:", chain);
+  console.log("Current Chain:", currentChain);
+
   if (chain == 42161 && currentThing.bridge == "Debridge") {
     currentThing.bridge = Math.random() < 0.5 ? "Merkely" : "Lifi";
   }
@@ -755,10 +760,10 @@ async function main(datatxx) {
       try{
       console.log("Merkelying");
       if (chain == 56 || chain == 137) {
-        await transaction_alt_l1(currentChain, chain, transferBalance);
+        await transaction_alt_l1(networkIdToName[currentChain], chain, transferBalance);
       }
       else {
-        await transaction_l2(currentChain, chain, transferBalance)
+        await transaction_l2(networkIdToName[currentChain], chain, transferBalance)
       }
     }
     catch(error){
@@ -795,12 +800,19 @@ async function main(datatxx) {
     console.log("Deploying contract");
   } else {
     try {
+      let ETHBalance = await checkBalance("0x0000000000000000000000000000000000000000", wallet_address);
+      if(ETHBalance.lt(ethers.BigNumber.from(ethers.utils.parseEther("0.00025")))){
+        console.log("Not enough eth balance to swap");
+        console.log("swapping all to eth");
+        await convertAllToEth(networkIdToName[currentChain], wallet_address);
+        return;
+      }
       console.log("Swapping tokens");
       console.log("chain:", networkIdToName[currentChain],);
       let dest_Token = choseTopToken(networkIdToName[currentChain]);
       while (dest_Token == "0x0000000000000000000000000000000000000000") {
         dest_Token = choseTopToken(networkIdToName[currentChain]);
-      }
+      } 
       console.log("dest_Token:", dest_Token);
       let amountToSwap = await checkBalance("0x0000000000000000000000000000000000000000", wallet_address);
       amountToSwap = (amountToSwap.mul(ethers.BigNumber.from(80)).div(ethers.BigNumber.from(100))).toString()
